@@ -10,7 +10,6 @@ from __future__ import division
 
 import numpy as np
 import pandas as pd
-from collections import defaultdict
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
@@ -20,7 +19,6 @@ from sklearn.svm import SVC
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import roc_auc_score, precision_score
 from sklearn.neural_network import MLPClassifier
 
 ################################
@@ -121,21 +119,23 @@ def feature_selection(X, y, varRatio1=0.001, impQuantile1=25):
     quantile in RF only selection. default=25
     """
     Xdic = {}
+    selectdic = {}
     #no feature selection
-    Xdic['noFeatureSelection'] = X
+    Xdic['noFS'] = X
+    selectdic['noFS'] = [True] *  X.shape[1]
     #PCA only
-    Xdic['PCA'], pca = pca_reduct(X)
+    Xdic['PCA'], selectdic['PCA'] = pca_reduct(X)
     #RF only
-    Xdic['RF'], selector_rf = rf_select(X, y, impQuantile=impQuantile1)
+    Xdic['RF'], selectdic['RF'] = rf_select(X, y, impQuantile=impQuantile1)
     #RF + PCA
-    Xdic['RF+PCA'], pca_rf = pca_reduct(Xdic['RF'])
+    Xdic['RF+PCA'], selectdic['RF+PCA'] = pca_reduct(Xdic['RF'])
     #RFE only
     estimator = LogisticRegression() 
     #NN, svc does not provide feature importance information, cannot be estimator
-    Xdic['RFE'], selector_rfe = rfe_select(estimator, X, y, score='precision')
+    Xdic['RFE'], selectdic['RFE'] = rfe_select(estimator, X, y, score='precision')
     #RFE + PCA
-    Xdic['RFE+PCA'], pca_rfe = pca_reduct(Xdic['RFE'])
-    return Xdic
+    Xdic['RFE+PCA'], selectdic['RFE+PCA'] = pca_reduct(Xdic['RFE'])
+    return Xdic, selectdic
   
 def pca_reduct(X):
     """Linear dimensionality reduction using Singular Value Decomposition of 
@@ -181,7 +181,7 @@ def model_selection(y, Xdic):
     for x in Xdic:
         model_dic[(x, 'SVM')] = svm_model(Xdic[x], y)
         
-        model_dic[(x, 'NeuralNetwork')] = nn_model(Xdic[x], y)
+        model_dic[(x, 'NN')] = nn_model(Xdic[x], y)
         
     sort_model = sorted(model_dic.items(), 
                         key=lambda x:x[1].best_score_, 
@@ -210,25 +210,3 @@ def nn_model(X_train, y_train, score='precision', alphas=[0.01, 0.1, 1, 5, 10],
     grid_nn = GridSearchCV(nn, param_grid=grid_values, scoring=score)
     grid_nn.fit(X_train, y_train)
     return grid_nn
-    
-################################
-##       model evaluation     ##
-################################     
-def test_model(model, X_test, y_test):
-     """Test top models on test data
-     """
-     y_decision = model.decision_function(X_test)
-     roc_auc_score(y_test, y_decision)
-     precision_score(y_test, y_decision)
-    
-    SVM 
-    neural network
-    RBF-Kernelized SVM and Grid Search on parameters:
-        linear, polynomial or radial basis function
-        C 0.1 - 1000
-    bayesian networks
-    basic model:random walk
-
-
-y_decision_fn_scores_auc = grid_clf_auc.decision_function(X_test) 
-roc_auc_score(y_test, y_decision_fn_scores_auc)
