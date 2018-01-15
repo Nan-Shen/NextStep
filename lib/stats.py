@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 
-allstats = ['adjClose', 'Volume', 'OBV', 'Weekday', 'RSI.6', 'RSI.12', 'SMA.3', 
+ALLSTATS = ['adjClose', 'Volume', 'OBV', 'Weekday', 'RSI.6', 'RSI.12', 'SMA.3', 
                 'EMA.6', 'EMA.12', 'ATR.14', 'MFI.14','ADX.14', 'ADX.20', 'MOM.1', 
                 'MOM.3', 'CCI.12', 'CCI.20', 'ROCR.3', 'ROCR.12','MACD', 
                 'WILLR', 'TSF.10', 'TSF.20', 'TEMA.3', 'TEMA.6', 'BBANDS']
@@ -22,7 +22,7 @@ allstats = ['adjClose', 'Volume', 'OBV', 'Weekday', 'RSI.6', 'RSI.12', 'SMA.3',
 ########################################################
 ##    features of stockToPredict, NASDAQ, S&P 500  ##
 ########################################################
-def all_features(stocks, 
+def all_features(stocks, price_col='Close',
                  stock_name=['SP&500', 'NASDAQ', 'tg'], 
                  features='all'):
     """stocks:a list of dataframes contain information of different stocks,
@@ -32,12 +32,12 @@ def all_features(stocks,
     dt = pd.DataFrame()
     
     for s, name in zip(stocks, stock_name):
-        dt0 = stock_feature(s, features)
-        dt0.columns.values = map(lambda x:('_').join([name, x]), dt0.columns.values)
+        dt0 = stock_feature(s, price_col, features)
+        dt0.columns = map(lambda x:('_').join([name, x]), dt0.columns.values)
         dt = pd.concat([dt,dt0],axis=1)  
     return dt
 
-def stock_feature(data, features='all'):
+def stock_feature(data, price_col='Close', features='all'):
     """
     data: input dataframe
     n: study period
@@ -65,9 +65,9 @@ def stock_feature(data, features='all'):
     
     f_data = pd.DataFrame()
     if features == 'all':
-        features = allstats
+        features = ALLSTATS
     
-    for f in allstats:
+    for f in ALLSTATS:
         if f == 'MACD':
              f_data['outMACD'], f_data['outMACDSignal'], f_data['outMACDHist'] = macd(data, col='Close')
         elif f == 'BBANDS':
@@ -75,11 +75,13 @@ def stock_feature(data, features='all'):
         elif '.' in f:
              name, n = f.split('.')
              if name == 'EMA' or name == 'SMA':
-                 f_data[name] = func_map[name](data['Close'], int(n))
+                 f_data[name] = func_map[name](data[price_col], int(n))
              else:
                  f_data[name] = func_map[name](data, int(n))
         else:
              f_data[f] = func_map[f](data)
+    f_data.index = data['Date']
+    f_data['Price'] = data[price_col].tolist()
     return f_data
 
 
