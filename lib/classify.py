@@ -25,24 +25,25 @@ from sklearn.neural_network import MLPClassifier
 ################################
 ##        preprocess          ##
 ################################
-def preprocess(data, ndays=[1, 3, 5, 10], stdize=True):
+def preprocess(data, n, stdize=True):
     """preprocess data, including add rise column, split traininf and 
     testing data sets, standardize feature values.
     """
     prep_data, y = clean(data, ndays)
     X_train, X_test, y_train, y_test = split_traintest(prep_data, y, n, test_size=100)
     if stdize:
+       X_train_scaled, X_test_scaled = standardize(X_train, X_test)
        return X_train_scaled, X_test_scaled, y_train, y_test 
     else:
        return X_train, X_test, y_train, y_test
         
-def clean(data, ndays):
+def clean(data, n):
     """Remove dates with NAs in any column,
     Add nth working day from first day column(order of day exclude weekends)
     Add column indicate if price of n days later is higher or lower than current
     price.
     data:features of a stock, SP&500 and NASDAQ in the same time period.
-    ndays: a list of n, build model to predict if price rise or drop n days laster
+    n: build model to predict if price rise or drop n days laster
     """
     data = data.sort_index()
     data['Order'] = range(data.shape[0])
@@ -50,9 +51,8 @@ def clean(data, ndays):
     prep_data = data.set_index(data['Order'])
     prep_data = prep_data.drop(['Order'], axis=1)
     y = pd.DataFrame()
-    for n in ndays:
-        rise = ifrise(prep_data, n)
-        y['Rise.'+str(n)] = rise
+    rise = ifrise(prep_data, n)
+    y['Rise.'+str(n)] = rise
     y.index = prep_data.index
     return prep_data, y
 
@@ -154,8 +154,7 @@ def svm_model(X_train, y_train, score='precision'):
     
     grid_svm = GridSearchCV(svm, param_grid=grid_values, scoring=score)
     grid_svm.fit(X_train, y_train)
-    score = grid_svm.best_score_
-    return grid_svm, score, grid_svm.best_params_
+    return grid_svm
 
 def nn_model(X_train, y_train, score='precision'):
     """select the best parameters for neural network.
@@ -167,8 +166,7 @@ def nn_model(X_train, y_train, score='precision'):
     
     grid_nn = GridSearchCV(nn, param_grid=grid_values, scoring=score)
     grid_nn.fit(X_train, y_train)
-    score = grid_nn.best_score_
-    return grid_nn, score, grid_nn.best_params_
+    return grid_nn
 
   
 def combo(X, y, 
@@ -187,21 +185,17 @@ def combo(X, y,
     #RF + PCA
     Xdic['RF+PCA'] = pca_reduct(X_rf, varRatio=varRatio3)
     
-    score_dic = {}
+   
     model_dic = {}
-    param_dic = {}
     for x in Xdic:
-        model_dic[(x, 'SVM')], 
-        score_dic[(x, 'SVM')],
-        param_dic[(x, 'SVM')] = svm_model(Xdic[x], y)
+        model_dic[(x, 'SVM')] = svm_model(Xdic[x], y)
         
-        model_dic[(x, 'NeuralNetwork')], 
-        score_dic[(x, 'NeuralNetwork')],
-        param_dic[(x, 'NeuralNetwork')] = nn_model(Xdic[x], y)
+        model_dic[(x, 'NeuralNetwork')] = nn_model(Xdic[x], y)
         
-    sort_score = sorted(score_dic.items(), key=lambda x:x[1], reverse=True)
-    best_model = model_dic[sort_score[0][0]]
-    best_model_params = param_dic[sort_score[0][0]]
+    sort_model = sorted(score_dic.items(), 
+                        key=lambda x:x[1].best_score_, 
+                        reverse=True)
+    best_model = sort_model[0][0]
     return best_model
     
 ################################
