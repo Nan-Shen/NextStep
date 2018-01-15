@@ -16,7 +16,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFECV
-from sklearn.svm import SVC
+from sklearn.svm import SVC, SVR
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import roc_auc_score, precision_score
@@ -52,8 +52,11 @@ def clean(data, n):
     prep_data = prep_data.drop(['Order'], axis=1)
     y = pd.DataFrame()
     rise = ifrise(prep_data, n)
+    filt = map(lambda i:i>=0, rise)
     y['Rise.'+str(n)] = rise
     y.index = prep_data.index
+    y = y[filt]
+    prep_data = prep_data[filt]
     return prep_data, y
 
 def ifrise(prep_data, n):
@@ -65,7 +68,7 @@ def ifrise(prep_data, n):
         if i+n in prep_data.index:
            rise.append(int(prep_data['tg_Price'].loc[i+n] > prep_data['tg_Price'].loc[i]))
         else:
-           rise.append(np.nan) 
+           rise.append(-1) 
     return rise
 
 def split_traintest(prep_data, y, n, test_size=100):
@@ -106,7 +109,33 @@ def poly_feature(X, degree):
 
 ################################
 ##    features selection      ##
-################################   
+################################ 
+def all_selection(X, y, varRatio1=0.001, varRatio2=0.001, impQuantile1=25):
+    """make a dicionary of all selection and combos.
+    X:training data set features.
+    y:training data set values to be predicted.
+    varRatio1: variance ratio threshold for PCA only selection. defualt=0.001.
+    varRatio2: variance ratio threshold for PCA in RF + PCA selection. defualt=0.001.
+    impQuantile1: keep features with importance score above impQuantile percent
+    quantile in RF only selection. default=25
+    """
+    Xdic = {}
+    #no feature selection
+    Xdic['noFeatureSelection'] = X
+    #PCA only
+    Xdic['PCA'] = pca_reduct(X, varRatio=varRatio1)
+    #RF only
+    Xdic['RF'], selector_rf = rf_select(X, y, impQuantile=impQuantile1)
+    #RF + PCA
+    Xdic['RF+PCA'] = pca_reduct(Xdic['RF'], varRatio=varRatio2)
+    #RFE only
+    estimator = SVR(kernel='linear') 
+    #NN, svc does not provide feature importance information, cannot be estimator
+    Xdic['RFE'], selector_rfe = rfe_select(estimator, X, y, score='precision')
+    #RFE + PCA
+    Xdic['RFE+PCA'] = pca_reduct(Xdic['RFE'], varRatio=varRatio2)
+    return Xdic
+  
 def pca_reduct(X, varRatio=0.001):
     """Linear dimensionality reduction using Singular Value Decomposition of 
     the data to project it to a lower dimensional space.
@@ -125,7 +154,7 @@ def rfe_select(estimator, X, y, score='precision'):
     estimator: model used to estimate, best number of features to retain
     score: selection critea, deault is precision. 
     """
-    selector = RFECV(estimator, step=1, cv=5, scoring=score, random_state=0)
+    selector = RFECV(estimator, step=1, cv=5, scoring=score)
     selector = selector.fit(X, y)
     X_select = X[:,selector.support_]
     return X_select, selector.support_
@@ -169,33 +198,14 @@ def nn_model(X_train, y_train, score='precision', alphas=[0.01, 0.1, 1, 5, 10],
     return grid_nn
 
   
-def combo(X, y, 
-          varRatio1=0.001, varRatio2=0.001, varRatio3=0.001, impQuantile1=25):
+def combo(X, y, Xdic):
     """Test differnt combinations of feature selestions and models
     """
-    Xdic = {}
-    #no feature selection
-    Xdic['noFeatureSelection'] = X
-    #PCA only
-    Xdic['PCA'] = pca_reduct(X, varRatio=varRatio1)
-    #RF only
-    Xdic['RF'], selector_rf = rf_select(X, y, impQuantile=impQuantile1)
-    #RF + PCA
-    Xdic['RF+PCA'] = pca_reduct(X_rf, varRatio=varRatio3)
-    
     model_dic = {}
     for x in Xdic:
         model_dic[(x, 'SVM')] = svm_model(Xdic[x], y)
         
         model_dic[(x, 'NeuralNetwork')] = nn_model(Xdic[x], y)
-        
-    #RFE only
-    estimator = SVC(kernel='rbf')
-    Xdic['RFE-svc'], selector_rfe_svc = rfe_select(estimator, X, y, score='precision')
-    model_dic[('RFE', 'SVM')] = nn_model(Xdic[x], y)
-    estimator = MLPClassifier(solver='lbfgs', random_state = 0)
-    Xdic['RFE-nn'], selector_rfe_svc = rfe_select(estimator, X, y, score='precision')
-    model_dic[('RFE', 'NeuralNetwork')] = nn_model(Xdic[x], y)
         
     sort_model = sorted(score_dic.items(), 
                         key=lambda x:x[1].best_score_, 
