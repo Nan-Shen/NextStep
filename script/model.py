@@ -33,7 +33,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('-s', '--sp500_fp', required=True,
               type=click.Path(exists=True),
               help='file path of sp&500 index history prices.')
-@click.option('-i', '--nasdaq_fp', required=True,
+@click.option('-n', '--nasdaq_fp', required=True,
               type=click.Path(exists=True),
               help='file path of NASDAQ index history prices.')
 @click.option('-o', '--out_fp', required=True,
