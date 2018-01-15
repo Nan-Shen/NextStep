@@ -111,7 +111,7 @@ def poly_feature(X, degree):
 ################################
 ##    features selection      ##
 ################################ 
-def feature_selection(X, y, varRatio1=0.001, varRatio2=0.001, impQuantile1=25):
+def feature_selection(X, y, varRatio1=0.001, impQuantile1=25):
     """make a dicionary of all selection and combos.
     X:training data set features.
     y:training data set values to be predicted.
@@ -124,20 +124,20 @@ def feature_selection(X, y, varRatio1=0.001, varRatio2=0.001, impQuantile1=25):
     #no feature selection
     Xdic['noFeatureSelection'] = X
     #PCA only
-    Xdic['PCA'] = pca_reduct(X, varRatio=varRatio1)
+    Xdic['PCA'], pca = pca_reduct(X)
     #RF only
     Xdic['RF'], selector_rf = rf_select(X, y, impQuantile=impQuantile1)
     #RF + PCA
-    Xdic['RF+PCA'] = pca_reduct(Xdic['RF'], varRatio=varRatio2)
+    Xdic['RF+PCA'], pca_rf = pca_reduct(Xdic['RF'])
     #RFE only
     estimator = LogisticRegression() 
     #NN, svc does not provide feature importance information, cannot be estimator
     Xdic['RFE'], selector_rfe = rfe_select(estimator, X, y, score='precision')
     #RFE + PCA
-    Xdic['RFE+PCA'] = pca_reduct(Xdic['RFE'], varRatio=varRatio2)
+    Xdic['RFE+PCA'], pca_rfe = pca_reduct(Xdic['RFE'])
     return Xdic
   
-def pca_reduct(X, varRatio=0.001):
+def pca_reduct(X):
     """Linear dimensionality reduction using Singular Value Decomposition of 
     the data to project it to a lower dimensional space.
     X: features
@@ -146,9 +146,8 @@ def pca_reduct(X, varRatio=0.001):
     """
     pca = PCA(random_state=0)
     pca.fit(X)
-    idx = sum(map(lambda r:r > varRatio, pca.explained_variance_ratio_))
-    X_pca = pca.components_[:, :idx]
-    return X_pca
+    X_pca = pca.transform(X)
+    return X_pca, pca
  
 def rfe_select(estimator, X, y, score='precision'):
     """remove one important features recursively, then rank features by importance.
@@ -175,6 +174,20 @@ def rf_select(X, y, impQuantile=25):
 ################################
 ##       model selection      ##
 ################################
+def model_selection(y, Xdic):
+    """Test differnt combinations of feature selestions and models
+    """
+    model_dic = {}
+    for x in Xdic:
+        model_dic[(x, 'SVM')] = svm_model(Xdic[x], y)
+        
+        model_dic[(x, 'NeuralNetwork')] = nn_model(Xdic[x], y)
+        
+    sort_model = sorted(model_dic.items(), 
+                        key=lambda x:x[1].best_score_, 
+                        reverse=True)
+    return sort_model
+
 def svm_model(X_train, y_train, score='precision', gammas=[0.1, 1, 10, 100, 1000]):
     """select the best parameters for svm model.
     """
@@ -197,22 +210,6 @@ def nn_model(X_train, y_train, score='precision', alphas=[0.01, 0.1, 1, 5, 10],
     grid_nn = GridSearchCV(nn, param_grid=grid_values, scoring=score)
     grid_nn.fit(X_train, y_train)
     return grid_nn
-
-  
-def combo(X, y, Xdic):
-    """Test differnt combinations of feature selestions and models
-    """
-    model_dic = {}
-    for x in Xdic:
-        model_dic[(x, 'SVM')] = svm_model(Xdic[x], y)
-        
-        model_dic[(x, 'NeuralNetwork')] = nn_model(Xdic[x], y)
-        
-    sort_model = sorted(score_dic.items(), 
-                        key=lambda x:x[1].best_score_, 
-                        reverse=True)
-    best_model = sort_model[0][0]
-    return best_model
     
 ################################
 ##       model evaluation     ##

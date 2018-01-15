@@ -202,7 +202,7 @@ def ema(price, n, Multiplier=False):
     return ema_init
       
 def macd(data, col='Close'):
-    """Moving Average Convergence Divergenece: Use different EMA signal buy & 
+    """Moving Average Convergence Divergence: Use different EMA signal buy & 
     sell.
     OSC(t)-EMAosc(t) 
     where OSC(t)=EMA1(t)-EMA2(t); 
