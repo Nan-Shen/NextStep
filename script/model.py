@@ -40,9 +40,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
               type=click.Path(exists=False),
               help='Output file pathway')
 @click.option('--start', required=True,
-               help='start date to take in as input data.')
+               help='start date to take in as input data. e.g. 2013-01-03')
 @click.option('--end', required=True,
-               help='end date to take in input data.')
+               help='end date to take in input data. e.g. 2017-12-29')
 @click.option('-n', '--n', required=True, 
               help='To predict n days later if price will increase or decrease.')
 
@@ -90,7 +90,7 @@ def select_feature_model(X_train, X_test, y_train, y_test, out_fp):
     Xdic, selectdic = feature_selection(X_train, y_train, varRatio1=0.001, impQuantile1=25)
     sorted_models = model_selection(y_train, Xdic)
     
-    model_roc(sorted_models, selectdic, X_test, y_test, out_fp, top=12)
+    model_roc(sorted_models, selectdic, X_test, y_test, out_fp, top=6)
     params, model = sorted_models[0]
     model_learningcurve(model, params, Xdic, y_train, out_fp)
     
