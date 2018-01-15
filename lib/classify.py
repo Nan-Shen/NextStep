@@ -16,8 +16,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFECV
-from sklearn.svm import SVC, SVR
+from sklearn.svm import SVC
 from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import roc_auc_score, precision_score
 from sklearn.neural_network import MLPClassifier
@@ -110,7 +111,7 @@ def poly_feature(X, degree):
 ################################
 ##    features selection      ##
 ################################ 
-def all_selection(X, y, varRatio1=0.001, varRatio2=0.001, impQuantile1=25):
+def feature_selection(X, y, varRatio1=0.001, varRatio2=0.001, impQuantile1=25):
     """make a dicionary of all selection and combos.
     X:training data set features.
     y:training data set values to be predicted.
@@ -129,7 +130,7 @@ def all_selection(X, y, varRatio1=0.001, varRatio2=0.001, impQuantile1=25):
     #RF + PCA
     Xdic['RF+PCA'] = pca_reduct(Xdic['RF'], varRatio=varRatio2)
     #RFE only
-    estimator = SVR(kernel='linear') 
+    estimator = LogisticRegression() 
     #NN, svc does not provide feature importance information, cannot be estimator
     Xdic['RFE'], selector_rfe = rfe_select(estimator, X, y, score='precision')
     #RFE + PCA
