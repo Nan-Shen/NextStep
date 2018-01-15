@@ -29,7 +29,7 @@ def preprocess(data, n, stdize=True):
     """preprocess data, including add rise column, split traininf and 
     testing data sets, standardize feature values.
     """
-    prep_data, y = clean(data, ndays)
+    prep_data, y = clean(data, n)
     X_train, X_test, y_train, y_test = split_traintest(prep_data, y, n, test_size=100)
     if stdize:
        X_train_scaled, X_test_scaled = standardize(X_train, X_test)
@@ -107,7 +107,6 @@ def poly_feature(X, degree):
 ################################
 ##    features selection      ##
 ################################   
-
 def pca_reduct(X, varRatio=0.001):
     """Linear dimensionality reduction using Singular Value Decomposition of 
     the data to project it to a lower dimensional space.
@@ -146,23 +145,24 @@ def rf_select(X, y, impQuantile=25):
 ################################
 ##       model selection      ##
 ################################
-def svm_model(X_train, y_train, score='precision'):
+def svm_model(X_train, y_train, score='precision', gammas=[0.1, 1, 10, 100, 1000]):
     """select the best parameters for svm model.
     """
     svm = SVC(kernel='rbf')
-    grid_values = {'gamma': [0.1, 1, 10, 100, 1000]}
+    grid_values = {'gamma': gammas}
     
     grid_svm = GridSearchCV(svm, param_grid=grid_values, scoring=score)
     grid_svm.fit(X_train, y_train)
     return grid_svm
 
-def nn_model(X_train, y_train, score='precision'):
+def nn_model(X_train, y_train, score='precision', alphas=[0.01, 0.1, 1, 5, 10],
+                                                  layers=[1, 10, 100, [5, 5], [10, 10]]):
     """select the best parameters for neural network.
     """
     nn = MLPClassifier(solver='lbfgs', random_state = 0)
     grid_values = {'activation': ['relu', 'logistic', 'tanh'],
-                   'alpha': [0.01, 0.1, 1, 5, 10],
-                   'hidden_layer_sizes':[1, 10, 100, [5, 5], [10, 10]]}
+                   'alpha': alphas,
+                   'hidden_layer_sizes':layers}
     
     grid_nn = GridSearchCV(nn, param_grid=grid_values, scoring=score)
     grid_nn.fit(X_train, y_train)
@@ -174,23 +174,28 @@ def combo(X, y,
     """Test differnt combinations of feature selestions and models
     """
     Xdic = {}
+    #no feature selection
+    Xdic['noFeatureSelection'] = X
     #PCA only
     Xdic['PCA'] = pca_reduct(X, varRatio=varRatio1)
-    #RFE only
-    Xdic['RFE'], selector_rfe = rfe_select(estimator, X, y, score='precision')
     #RF only
     Xdic['RF'], selector_rf = rf_select(X, y, impQuantile=impQuantile1)
-    #RFE + PCA
-    Xdic['RFE+PCA'] = pca_reduct(X_rfe, varRatio=varRatio2)
     #RF + PCA
     Xdic['RF+PCA'] = pca_reduct(X_rf, varRatio=varRatio3)
     
-   
     model_dic = {}
     for x in Xdic:
         model_dic[(x, 'SVM')] = svm_model(Xdic[x], y)
         
         model_dic[(x, 'NeuralNetwork')] = nn_model(Xdic[x], y)
+        
+    #RFE only
+    estimator = SVC(kernel='rbf')
+    Xdic['RFE-svc'], selector_rfe_svc = rfe_select(estimator, X, y, score='precision')
+    model_dic[('RFE', 'SVM')] = nn_model(Xdic[x], y)
+    estimator = MLPClassifier(solver='lbfgs', random_state = 0)
+    Xdic['RFE-nn'], selector_rfe_svc = rfe_select(estimator, X, y, score='precision')
+    model_dic[('RFE', 'NeuralNetwork')] = nn_model(Xdic[x], y)
         
     sort_model = sorted(score_dic.items(), 
                         key=lambda x:x[1].best_score_, 
