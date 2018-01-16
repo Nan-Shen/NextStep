@@ -51,8 +51,8 @@ def model_learningcurve(model, params, Xdic, y_train, out_fp):
     """
     select, modelname = params
     X_train_fs = Xdic[select]
-    name = 'Learning Curve(%s)' % (plot_label)
     plot_label = '%s.%s_classifier' % (select, modelname)
+    name = 'Learning Curve(%s)' % (plot_label)
     plt.figure()    
     sns.set();sns.set_context({"figure.figsize": (20,20)});sns.set_context('talk')
     sns.set_style('white',{'font.family':'sans-serif',
