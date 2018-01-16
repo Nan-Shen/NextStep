@@ -14,7 +14,7 @@ from scikitplot.estimators import plot_learning_curve
 ################################
 ##       model evaluation     ##
 ################################     
-def model_roc(sorted_models, selectdic, X_test, y_test, out_fp, top=3):
+def model_roc(sorted_models, selectdic, X_test, y_test, out_fp, name, top=3):
      """ROC plot of top models
      """
      plt.figure()    
@@ -28,9 +28,11 @@ def model_roc(sorted_models, selectdic, X_test, y_test, out_fp, top=3):
          #transform test data
          select, modelname = params
          X_test_fs = transform_test(select, selectdic, X_test)
-         
-         y_score = model.predict(X_test_fs)
-         fpr, tpr, _ = roc_curve(y_test, y_score)
+         if modelname == 'SVM':
+             y_score = model.decision_function(X_test_fs)
+         elif modelname == 'NN':
+             y_score = model.predict_proba(X_test_fs)[:,1]
+         fpr, tpr, _ = roc_curve(y_test, y_score, pos_label=1)
          roc_auc = auc(fpr, tpr)
          precision = model.score(X_test_fs, y_test)
          plt.plot(fpr, tpr, lw=3, alpha=0.7, 
@@ -40,21 +42,22 @@ def model_roc(sorted_models, selectdic, X_test, y_test, out_fp, top=3):
      plt.ylabel('True Positive Rate (Recall)', fontsize=16)
      plt.plot([0, 1], [0, 1], color='k', lw=0.2, linestyle='--')
      plt.legend(loc='lower right', fontsize=11)
-     plt.title('top%d ROC curve' % top, fontsize=16)
+     plt.title('%s ROC curve' % name, fontsize=16)
      plt.axes().set_aspect('equal')
-     plt.savefig('%s/top%d_ROC.jpg' % (out_fp, top), bbox_inches='tight')
+     plt.savefig('%s/%s_ROC.jpg' % (out_fp, name), bbox_inches='tight')
      
 def model_learningcurve(model, params, Xdic, y_train, out_fp):
     """Classification plot of model
     """
     select, modelname = params
     X_train_fs = Xdic[select]
+    name = 'Learning Curve(%s)' % (plot_label)
     plot_label = '%s.%s_classifier' % (select, modelname)
     plt.figure()    
     sns.set();sns.set_context({"figure.figsize": (20,20)});sns.set_context('talk')
     sns.set_style('white',{'font.family':'sans-serif',
                          'font.sans-serif':['Helvetica']})
-    plot_learning_curve(model, X_train_fs, y_train, scoring='precision')
+    plot_learning_curve(model, X_train_fs, y_train, title=name, scoring='precision')
     plt.savefig('%s/%s_learning_curve.png' % (out_fp, plot_label), bbox_inches='tight')
 
 def transform_test(select, selectdic, X_test):

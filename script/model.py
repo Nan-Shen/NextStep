@@ -51,7 +51,7 @@ def best_model(stock_fp, sp500_fp, nasdaq_fp, start, end, n, out_fp):
     """
     data = read_input(stock_fp, sp500_fp, nasdaq_fp, start, end)
     X_train, X_test, y_train, y_test = preprocess_data(data, n, stdize=True)
-    select_feature_model(X_train, X_test, y_train, y_test, out_fp)
+    select_feature_model(X_train, X_test, y_train, y_test, out_fp, n)
 
 def read_input(stock_fp, sp500_fp, nasdaq_fp, start, end):
     """Parse and extract all the features of target stock, Sp&500, NASDAQ.
@@ -80,7 +80,7 @@ def preprocess_data(data, n, stdize=True):
     X_train, X_test, y_train, y_test = preprocess(data, n, stdize)
     return X_train, X_test, y_train, y_test
 
-def select_feature_model(X_train, X_test, y_train, y_test, out_fp):
+def select_feature_model(X_train, X_test, y_train, y_test, out_fp, n):
     """Use random forest and recursive feature elimination to select features.
     And PCA to reduce feature dimensinons. Neural network and SVM classification 
     model were tested on each combinations of feature selection and reduction.
@@ -90,7 +90,8 @@ def select_feature_model(X_train, X_test, y_train, y_test, out_fp):
     Xdic, selectdic = feature_selection(X_train, y_train, varRatio1=0.001, impQuantile1=25)
     sorted_models = model_selection(y_train, Xdic)
     
-    model_roc(sorted_models, selectdic, X_test, y_test, out_fp, top=6)
+    name = '%s days prediction models ROC curve' % (n)
+    model_roc(sorted_models, selectdic, X_test, y_test, out_fp, name, top=6)
     params, model = sorted_models[0]
     model_learningcurve(model, params, Xdic, y_train, out_fp)
     
