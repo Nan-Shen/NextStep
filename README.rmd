@@ -1,0 +1,36 @@
+---
+title: "README"
+output: html_document
+---
+# NEXTStep
+
+## A Random Walk Down Wall Street
+
+NextStep is a tool to extract time-series features of history stock prices and then based on these feature, predict future changes using machine learning models.
+
+It takes Yahoo history stock price as input. You can specify the dates you want to include in your model. It will make the last 100 entries as testing data and all the rest as training data. Then, it will automatically select the best feature selection strategy (recursive feature enimilation, random forest w/o PCA or PCA only) and the best paramters for SVM or Neural Network model. The end product will be a list of models sorted by their cross validation precision score.
+
+You can install this tool and use code below to predict changes 5 days later(set by option n):
+
+```{r,echo=FALSE,message=FALSE,strip.white=TRUE, eval=FALSE}
+model.py -i $PWD/targetstock.csv -s $PWD/S&P500index.csv -n $PWD/NASDAQindex.csv -o output_fp --start 2013-01-03 --end 2017-12-29 -n 5
+```
+
+## Dependencies
+Numpy
+
+matplotlib
+
+pandas
+
+datetime
+
+click
+
+Seaborn
+
+Sklearn
+
+scikitplot
+
+

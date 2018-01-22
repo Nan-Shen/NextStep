@@ -8,9 +8,8 @@ import ast
 import re
 
 __author__ = "Nan Shen"
-__copyright__ = ""
 __credits__ = ["Nan Shen"]
-__license__ = ""
+__version__ = "0.5-dev"
 __maintainer__ = "Nan Shen"
 __email__ = "nanshenbms@gmail.com"
 
@@ -25,23 +24,23 @@ setup(name='NextStep',
       description='Stock price prediction',
       classifiers=[
           'Development Status :: 1 - Alpha',
-          'License :: ',
           'Programming Language :: Python :: 2.7',
-          'Topic :: ',
+          'Topic :: Finance :: Stock',
       ],
       url='https://github.com/Nan-Shen/NextStep.git',
       author=__author__,
       author_email=__email__,
-      license=__license__,
-      packages=['lodi'],
+      packages=['NextStep'],
       scripts=glob('scripts/*py'),
       install_requires=[
           'numpy',
+          'matplotlib',
+          'datetime',
+          'scikitplot',
           'scipy',
           'click',
           'seaborn',
           'sklearn',
           'pandas',
-          'statsmodels'
       ],
       zip_safe=False)

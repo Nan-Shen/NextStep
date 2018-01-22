@@ -5,6 +5,15 @@ Created on Sat Jan 13 21:29:35 2018
 
 @author: Nan
 """
+
+__author__ = "Nan Shen"
+__credits__ = ["Nan Shen"]
+__version__ = "0.5-dev"
+__maintainer__ = "Nan Shen"
+__email__ = "nanshenbms@gmail.com"
+
+
+
 import click
 
 from NextStep.parse import parse_yahoo_to_nextstep
@@ -94,6 +103,8 @@ def select_feature_model(X_train, X_test, y_train, y_test, out_fp, n):
     model_roc(sorted_models, selectdic, X_test, y_test, out_fp, name, top=6)
     params, model = sorted_models[0]
     model_learningcurve(model, params, Xdic, y_train, out_fp)
+    
+    return sorted_models
     
 if __name__ == "__main__":
     best_model() 
